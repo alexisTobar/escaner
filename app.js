@@ -34,7 +34,7 @@ function loopScanner() {
   requestAnimationFrame(loopScanner);
 }
 
-// 🚀 3. Detectar carta con OpenCV y pasar a OCR
+// 🚀 3. Detectar carta y leer SOLO el nombre
 async function detectCardAndRead() {
   try {
     let src = cv.imread(canvas);
@@ -65,23 +65,32 @@ async function detectCardAndRead() {
     if (biggestContour && maxArea > 50000) { // filtrar ruido
       let rect = cv.boundingRect(biggestContour);
 
-      // recortar carta
+      // recortar carta completa
       let card = src.roi(rect);
 
-      // convertir a canvas temporal
+      // 🔹 solo la parte superior (25% de la altura) → nombre
+      let nameHeight = Math.floor(card.rows * 0.25);
+      let nameRect = new cv.Rect(0, 0, card.cols, nameHeight);
+      let nameRegion = card.roi(nameRect);
+
+      // convertir solo la zona del nombre a canvas temporal
       let cardCanvas = document.createElement("canvas");
-      cv.imshow(cardCanvas, card);
+      cv.imshow(cardCanvas, nameRegion);
 
-      // 🚀 OCR en recorte
+      // 🚀 OCR solo al nombre
       const { data: { text } } = await Tesseract.recognize(cardCanvas, "eng");
-      const cleanText = text.replace(/\n/g, " ").trim();
+      let cleanText = text.replace(/\n/g, " ").trim();
 
-      if (cleanText.length > 3 && cleanText !== lastText) {
+      // 🔹 limpieza extra: solo letras, números y espacios
+      cleanText = cleanText.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, "").trim();
+
+      if (cleanText.length > 2 && cleanText !== lastText) {
         lastText = cleanText;
         ocrTextEl.textContent = cleanText;
         buscarEnScryfall(cleanText);
       }
 
+      nameRegion.delete();
       card.delete();
     }
 
@@ -118,5 +127,6 @@ function mostrarCarta(data) {
 
 startCamera();
 video.addEventListener("playing", loopScanner);
+
 
 
