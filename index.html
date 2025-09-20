@@ -3,32 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Scanner MTG Inteligente</title>
+  <title>Buscador de Cartas MTG con Traducción</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>📷 Scanner Automático de Cartas MTG</h1>
+  <h1>🔍 Buscador de Cartas MTG (Español)</h1>
 
-  <!-- Buscador manual -->
   <div id="searchContainer">
     <input type="text" id="searchInput" placeholder="Escribe el nombre de la carta">
     <button id="searchButton">Buscar</button>
   </div>
 
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none"></canvas>
-
-  <h2>Texto detectado:</h2>
-  <p id="ocrText">Esperando carta...</p>
-
   <h2>Carta encontrada:</h2>
   <div id="cardResult"></div>
 
-  <!-- OCR -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <!-- OpenCV.js -->
-  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+  <h2>Historial de cartas:</h2>
+  <div id="history"></div>
+
   <script src="app.js"></script>
 </body>
 </html>
+
 

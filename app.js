@@ -1,172 +1,125 @@
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const ocrTextEl = document.getElementById("ocrText");
-const cardResult = document.getElementById("cardResult");
 const searchInput = document.getElementById("searchInput");
 const searchButton = document.getElementById("searchButton");
+const cardResult = document.getElementById("cardResult");
+const historyDiv = document.getElementById("history");
 
-let processing = false;
-let lastText = "";
+let history = JSON.parse(localStorage.getItem("mtgHistory")) || [];
 
-// 🚀 1. Acceder a cámara
-async function startCamera() {
+// Mostrar historial al cargar
+function mostrarHistorial() {
+  historyDiv.innerHTML = "";
+  if(history.length === 0) {
+    historyDiv.innerHTML = "<p>No hay cartas buscadas todavía.</p>";
+    return;
+  }
+  history.forEach(card => {
+    const div = document.createElement("div");
+    div.classList.add("card");
+    div.innerHTML = `
+      <h3>${card.name}</h3>
+      <img src="${card.image}" alt="${card.name}">
+      <p><strong>Tipo:</strong> ${card.type}</p>
+      <p>${card.text}</p>
+    `;
+    historyDiv.appendChild(div);
+  });
+}
+
+// Traducir texto usando LibreTranslate
+async function traducir(texto, source='en', target='es') {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" },
-      audio: false
+    const res = await fetch('https://libretranslate.de/translate', {
+      method:'POST',
+      body: JSON.stringify({
+        q: texto,
+        source: source,
+        target: target,
+        format: "text"
+      }),
+      headers: { "Content-Type": "application/json" }
     });
-    video.srcObject = stream;
-  } catch (err) {
-    alert("Error cámara: " + err);
+    const data = await res.json();
+    return data.translatedText;
+  } catch (e) {
+    console.error("Error traducción:", e);
+    return texto; // fallback: retorna texto original
   }
 }
 
-// 🚀 2. Bucle automático
-function loopScanner() {
-  if (!processing && video.readyState === video.HAVE_ENOUGH_DATA) {
-    processing = true;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-
-    detectCardAndRead();
-  }
-  requestAnimationFrame(loopScanner);
-}
-
-// 🚀 3. Detectar carta y leer título o texto
-async function detectCardAndRead() {
+// Buscar carta en Scryfall
+async function buscarCarta(nombre) {
   try {
-    let src = cv.imread(canvas);
-    let gray = new cv.Mat();
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-
-    // Mejorar contraste y binarización
-    let blur = new cv.Mat();
-    cv.GaussianBlur(gray, blur, new cv.Size(5,5),0);
-    let thresh = new cv.Mat();
-    cv.adaptiveThreshold(blur, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 15, 10);
-
-    // Detectar bordes
-    let edges = new cv.Mat();
-    cv.Canny(thresh, edges, 100, 200);
-
-    // Contornos
-    let contours = new cv.MatVector();
-    let hierarchy = new cv.Mat();
-    cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    let biggestContour = null;
-    let maxArea = 0;
-
-    for (let i = 0; i < contours.size(); i++) {
-      let cnt = contours.get(i);
-      let area = cv.contourArea(cnt);
-      if (area > maxArea) {
-        maxArea = area;
-        biggestContour = cnt;
-      }
-    }
-
-    let ocrText = "";
-
-    if (biggestContour && maxArea > 50000) {
-      let rect = cv.boundingRect(biggestContour);
-      let card = src.roi(rect);
-
-      // 🔹 Zona superior: título (25%)
-      let nameHeight = Math.floor(card.rows * 0.25);
-      let nameRect = new cv.Rect(0,0,card.cols,nameHeight);
-      let nameRegion = card.roi(nameRect);
-
-      // Canvas temporal
-      let cardCanvas = document.createElement("canvas");
-      cv.imshow(cardCanvas, nameRegion);
-
-      // OCR título
-      const { data: { text } } = await Tesseract.recognize(cardCanvas, "eng");
-      ocrText = text.replace(/\n/g," ").replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g,"").trim();
-
-      nameRegion.delete();
-      card.delete();
-
-      // Backup: buscar por texto/habilidad
-      if (ocrText.length < 2) {
-        let textHeight = Math.floor(card.rows * 0.5);
-        let textRect = new cv.Rect(0, nameHeight, card.cols, textHeight);
-        let textRegion = card.roi(textRect);
-        let textCanvas = document.createElement("canvas");
-        cv.imshow(textCanvas, textRegion);
-        const { data: { text: t } } = await Tesseract.recognize(textCanvas, "eng");
-        ocrText = t.replace(/\n/g," ").replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g,"").trim();
-        textRegion.delete();
-      }
-
-      if (ocrText.length > 2 && ocrText !== lastText) {
-        lastText = ocrText;
-        ocrTextEl.textContent = ocrText;
-        buscarEnScryfall(ocrText);
-      }
-    }
-
-    src.delete(); gray.delete(); blur.delete(); thresh.delete(); edges.delete(); contours.delete(); hierarchy.delete();
-  } catch(e){
-    console.error(e);
-  } finally {
-    processing = false;
-  }
-}
-
-// 🚀 4. Buscar en Scryfall
-async function buscarEnScryfall(query) {
-  try {
-    // Primero buscar por nombre
-    let url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(query)}&lang=es`;
+    // Primero en español
+    let url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}&lang=es`;
     let res = await fetch(url);
-    if (!res.ok) {
-      // fallback: buscar por texto/oracle
-      url = `https://api.scryfall.com/cards/search?q=oracle:"${encodeURIComponent(query)}"&lang=es`;
-      res = await fetch(url);
-      if (!res.ok) throw new Error("Carta no encontrada");
-      const dataSearch = await res.json();
-      if (dataSearch.data && dataSearch.data.length>0) mostrarCarta(dataSearch.data[0]);
-      else throw new Error("Carta no encontrada");
+    let data;
+    if(res.ok){
+      data = await res.json();
     } else {
-      const data = await res.json();
-      mostrarCarta(data);
+      // fallback: buscar en inglés
+      url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}&lang=en`;
+      res = await fetch(url);
+      if(!res.ok) throw new Error("Carta no encontrada");
+      data = await res.json();
+      // traducir nombre y texto
+      data.printed_name = await traducir(data.name);
+      data.printed_text = data.oracle_text ? await traducir(data.oracle_text) : "";
+      data.printed_type_line = data.type_line ? await traducir(data.type_line) : "";
     }
-  } catch(err){
-    cardResult.innerHTML = `<p style="color:red">❌ No se encontró carta</p>`;
+    mostrarCarta(data);
+    guardarHistorial(data);
+  } catch(err) {
+    cardResult.innerHTML = `<p style="color:red">❌ No se encontró la carta "${nombre}"</p>`;
   }
 }
 
-// 🚀 5. Mostrar carta
-function mostrarCarta(data){
-  cardResult.innerHTML = `
+// Mostrar carta
+function mostrarCarta(data) {
+  cardResult.innerHTML = "";
+  const div = document.createElement("div");
+  div.classList.add("card");
+  div.innerHTML = `
     <h3>${data.printed_name || data.name}</h3>
     <img src="${data.image_uris?.normal || data.image_uris?.small}" alt="${data.name}">
     <p><strong>Tipo:</strong> ${data.printed_type_line || data.type_line}</p>
     <p><strong>Texto:</strong><br>${data.printed_text || data.oracle_text || "Sin texto"}</p>
   `;
+  cardResult.appendChild(div);
 }
 
-// 🚀 6. Buscar manual
+// Guardar carta en historial
+function guardarHistorial(data) {
+  const cardData = {
+    name: data.printed_name || data.name,
+    image: data.image_uris?.normal || data.image_uris?.small,
+    type: data.printed_type_line || data.type_line,
+    text: data.printed_text || data.oracle_text || ""
+  };
+  // Evitar duplicados
+  if(!history.some(c => c.name === cardData.name)) {
+    history.unshift(cardData); 
+    if(history.length > 20) history.pop(); 
+    localStorage.setItem("mtgHistory", JSON.stringify(history));
+    mostrarHistorial();
+  }
+}
+
+// Eventos
 searchButton.addEventListener("click", () => {
   const nombre = searchInput.value.trim();
-  if(nombre.length>0) buscarEnScryfall(nombre);
+  if(nombre) buscarCarta(nombre);
 });
 
 searchInput.addEventListener("keyup", (e) => {
   if(e.key === "Enter") {
     const nombre = searchInput.value.trim();
-    if(nombre.length>0) buscarEnScryfall(nombre);
+    if(nombre) buscarCarta(nombre);
   }
 });
 
-startCamera();
-video.addEventListener("playing", loopScanner);
+// Inicializar historial
+mostrarHistorial();
+
 
 
 
