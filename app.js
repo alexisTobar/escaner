@@ -5,22 +5,24 @@ const historyDiv = document.getElementById("history");
 
 let history = JSON.parse(localStorage.getItem("mtgHistory")) || [];
 
-// Mostrar historial al cargar
+// Mostrar historial en galería
 function mostrarHistorial() {
   historyDiv.innerHTML = "";
   if(history.length === 0) {
     historyDiv.innerHTML = "<p>No hay cartas buscadas todavía.</p>";
     return;
   }
-  history.forEach(card => {
+  history.forEach((card, index) => {
     const div = document.createElement("div");
     div.classList.add("card");
     div.innerHTML = `
       <h3>${card.name}</h3>
       <img src="${card.image}" alt="${card.name}">
       <p><strong>Tipo:</strong> ${card.type}</p>
-      <p>${card.text}</p>
     `;
+    div.querySelector("img").addEventListener("click", () => {
+      mostrarCarta(card);
+    });
     historyDiv.appendChild(div);
   });
 }
@@ -42,29 +44,29 @@ async function traducir(texto, source='en', target='es') {
     return data.translatedText;
   } catch (e) {
     console.error("Error traducción:", e);
-    return texto; // fallback: retorna texto original
+    return texto; 
   }
 }
 
 // Buscar carta en Scryfall
 async function buscarCarta(nombre) {
   try {
-    // Primero en español
     let url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}&lang=es`;
     let res = await fetch(url);
     let data;
     if(res.ok){
-      data = await res.json();
+      data = await res.json(); // versión en español disponible
     } else {
-      // fallback: buscar en inglés
+      // fallback: buscar en inglés y traducir
       url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}&lang=en`;
       res = await fetch(url);
       if(!res.ok) throw new Error("Carta no encontrada");
       data = await res.json();
-      // traducir nombre y texto
+
+      // traducir nombre, tipo y texto
       data.printed_name = await traducir(data.name);
-      data.printed_text = data.oracle_text ? await traducir(data.oracle_text) : "";
       data.printed_type_line = data.type_line ? await traducir(data.type_line) : "";
+      data.printed_text = data.oracle_text ? await traducir(data.oracle_text) : "";
     }
     mostrarCarta(data);
     guardarHistorial(data);
@@ -73,7 +75,7 @@ async function buscarCarta(nombre) {
   }
 }
 
-// Mostrar carta
+// Mostrar carta seleccionada
 function mostrarCarta(data) {
   cardResult.innerHTML = "";
   const div = document.createElement("div");
@@ -95,10 +97,9 @@ function guardarHistorial(data) {
     type: data.printed_type_line || data.type_line,
     text: data.printed_text || data.oracle_text || ""
   };
-  // Evitar duplicados
   if(!history.some(c => c.name === cardData.name)) {
-    history.unshift(cardData); 
-    if(history.length > 20) history.pop(); 
+    history.unshift(cardData);
+    if(history.length > 20) history.pop();
     localStorage.setItem("mtgHistory", JSON.stringify(history));
     mostrarHistorial();
   }
@@ -119,6 +120,7 @@ searchInput.addEventListener("keyup", (e) => {
 
 // Inicializar historial
 mostrarHistorial();
+
 
 
 
