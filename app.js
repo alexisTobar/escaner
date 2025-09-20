@@ -3,6 +3,8 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const ocrTextEl = document.getElementById("ocrText");
 const cardResult = document.getElementById("cardResult");
+const searchInput = document.getElementById("searchInput");
+const searchButton = document.getElementById("searchButton");
 
 let processing = false;
 let lastText = "";
@@ -90,9 +92,8 @@ async function detectCardAndRead() {
       nameRegion.delete();
       card.delete();
 
-      // Si el OCR del nombre falla, usar backup: buscar por fragmento del texto detectado
+      // Backup: buscar por texto/habilidad
       if (ocrText.length < 2) {
-        // zona media de la carta (habilidades)
         let textHeight = Math.floor(card.rows * 0.5);
         let textRect = new cv.Rect(0, nameHeight, card.cols, textHeight);
         let textRegion = card.roi(textRect);
@@ -151,8 +152,22 @@ function mostrarCarta(data){
   `;
 }
 
+// 🚀 6. Buscar manual
+searchButton.addEventListener("click", () => {
+  const nombre = searchInput.value.trim();
+  if(nombre.length>0) buscarEnScryfall(nombre);
+});
+
+searchInput.addEventListener("keyup", (e) => {
+  if(e.key === "Enter") {
+    const nombre = searchInput.value.trim();
+    if(nombre.length>0) buscarEnScryfall(nombre);
+  }
+});
+
 startCamera();
 video.addEventListener("playing", loopScanner);
+
 
 
 

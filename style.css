@@ -11,6 +11,31 @@ h1 {
   margin-bottom: 15px;
 }
 
+#searchContainer {
+  margin-bottom: 15px;
+}
+
+#searchInput {
+  padding: 8px;
+  width: 60%;
+  max-width: 250px;
+  border-radius: 6px;
+  border: none;
+}
+
+#searchButton {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background-color: #4cafef;
+  color: white;
+  cursor: pointer;
+}
+
+#searchButton:hover {
+  background-color: #3b8edc;
+}
+
 video {
   width: 100%;
   max-width: 400px;
@@ -34,5 +59,4 @@ video {
   border-radius: 10px;
   box-shadow: 0px 4px 12px rgba(0,0,0,0.6);
 }
-
 
