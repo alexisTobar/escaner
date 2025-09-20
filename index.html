@@ -3,26 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Scanner de Cartas MTG</title>
+  <title>Scanner Automático MTG</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>📷 Scanner de Cartas MTG</h1>
+  <h1>📷 Scanner Automático de Cartas MTG</h1>
 
   <video id="video" autoplay playsinline></video>
-  <button id="capture">Escanear Carta</button>
-  <canvas id="frameCanvas" style="display:none"></canvas>
-  <canvas id="procCanvas"></canvas>
+  <canvas id="canvas" style="display:none"></canvas>
 
-  <h2>Resultado OCR:</h2>
-  <p id="ocrText">Nada escaneado aún</p>
+  <h2>Texto detectado:</h2>
+  <p id="ocrText">Esperando carta...</p>
 
   <h2>Carta encontrada:</h2>
   <div id="cardResult"></div>
 
-  <!-- Librerías -->
-  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+  <!-- OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- OpenCV.js -->
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
+

@@ -1,10 +1,14 @@
 body {
   font-family: Arial, sans-serif;
   text-align: center;
-  margin: 0;
-  padding: 20px;
   background: #111;
   color: #eee;
+  margin: 0;
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 15px;
 }
 
 video {
@@ -14,20 +18,20 @@ video {
   border-radius: 12px;
 }
 
-#procCanvas {
+#ocrText {
   margin-top: 10px;
-  max-width: 400px;
-  border: 2px dashed #4cafef;
+  font-size: 16px;
+  color: #4cafef;
 }
 
-button {
-  margin-top: 10px;
-  padding: 12px 20px;
-  font-size: 16px;
-  background: #4cafef;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+#cardResult {
+  margin-top: 20px;
+}
+
+#cardResult img {
+  margin-top: 15px;
+  width: 300px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 12px rgba(0,0,0,0.6);
 }
 
